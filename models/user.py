@@ -8,7 +8,7 @@ class Role(enum.Enum):
     Consultant= "Consultant"
 
 class User(Base):
-    __tablename__ = 'user'
+    __tablename__ = 'users'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_name = Column(String, nullable=False)
