@@ -10,6 +10,7 @@ from models.opportunity import Opportunity
 from models.consultant_opportunity import ConsultantOpportunity
 from models.training import Training
 from models.consultant_training import ConsultantTraining
+from models.user import User
 
 DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/designathon"
 
