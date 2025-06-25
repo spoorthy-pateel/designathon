@@ -41,3 +41,37 @@ def add_user():
         }), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@user_bp.route('/login', methods=['POST'])
+def login():
+    try:
+        # Parse JSON data from the request
+        data = request.json
+        user_name = data.get('user_name')
+        password = data.get('password')
+
+        # Validate input
+        if not user_name or not password:
+            return jsonify({"error": "Missing username or password"}), 400
+
+        # Get the user service
+        user_service = get_user_service()
+
+        # Validate the user
+        user, error = user_service.validate_user(user_name, password)
+
+        if error:
+            return jsonify({"error": error}), 401
+
+        # Return success response
+        return jsonify({
+            "message": "Login successful",
+            "user": {
+                "id": user.id,
+                "user_name": user.user_name,
+                "role": user.role.value
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
