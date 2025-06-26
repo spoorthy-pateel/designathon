@@ -10,9 +10,10 @@ class Role(enum.Enum):
 class User(Base):
     __tablename__ = 'users'
     
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_name = Column(String, nullable=False)
+    user_id = Column(Integer, primary_key=True, autoincrement=True)
+    emp_id = Column(Integer,unique=True, nullable=False)
     password=Column(String,nullable=False)
     role=Column(Enum(Role), nullable=False)
+    consultant = relationship("Consultant", back_populates="user", uselist=False)
 
     

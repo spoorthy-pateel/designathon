@@ -23,6 +23,8 @@ def add_consultant():
         address = data.get('address')
         current_role = data.get('current_role')
 
+       
+
         # Validate required fields
         if not name or not emp_id or not mobile_no or not email:
             return jsonify({"error": "Missing required fields"}), 400
@@ -39,6 +41,7 @@ def add_consultant():
             address=address,
             current_role=current_role
         )
+        
 
         if error:
             return jsonify({"error": error}), 400
@@ -109,6 +112,9 @@ def get_all_consultants():
 def update_consultant(consultant_id):
     try:
         data = request.json
+
+        data.pop('user_id', None)
+
         consultant_service = get_consultant_service()
         consultant, error = consultant_service.update_consultant(consultant_id, **data)
         if error:
