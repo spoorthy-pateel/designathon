@@ -12,19 +12,23 @@ from controllers.user_controller import user_bp
 from controllers.training_controller import training_bp
 from controllers.consultant_training_controller import consultant_training_bp
 from controllers.consultant_controller import consultant_bp
-# SQLAlchemy database setup
 from database import init_db
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+# SQLAlchemy database setup
+DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/designathon"
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 app = Flask(__name__)
 CORS(app)
 
 app.register_blueprint(user_bp, url_prefix='/user')
-app.register_blueprint(consultant_bp,url_prefix='/consultant')
-
+app.register_blueprint(consultant_bp, url_prefix='/consultant')
 app.register_blueprint(training_bp, url_prefix='/training')
-
-app.register_blueprint(consultant_training_bp,url_prefix='/consultantTraining')
+app.register_blueprint(consultant_training_bp, url_prefix='/consultantTraining')
 
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -76,7 +80,6 @@ def agent_handler(agent_name):
             except Exception as e:
                 return jsonify({'error': 'LLM output was not valid JSON', 'llm_content': content}), 500
 
-            # Insert into database with SQLAlchemy session!
             db = SessionLocal()
             insert_resume_data(data, user_id=1, db_session=db)  # Change user_id logic as needed
             db.close()

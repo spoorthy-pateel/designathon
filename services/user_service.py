@@ -23,3 +23,10 @@ class UserService:
         if not check_password_hash(user.password,password):
             return None,"Invalid employee id or password"
         return user,None
+
+    def get_user_by_emp_id(self, emp_id: int):
+        """
+        Fetch a user by their employee ID.
+        Returns the User object if found, else None.
+        """
+        return self.db_session.query(User).filter(User.emp_id == emp_id).first()
