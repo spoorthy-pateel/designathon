@@ -6,19 +6,25 @@ import importlib
 import pdfplumber
 import json
 import re
-
 from OpenRouter import openrouter_chat
-from database import insert_resume_data
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
+from resume_database import insert_resume_data
+from controllers.user_controller import user_bp
+from controllers.training_controller import training_bp
+from controllers.consultant_training_controller import consultant_training_bp
+from controllers.consultant_controller import consultant_bp
 # SQLAlchemy database setup
-DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/designathon"
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+from database import init_db
+
 
 app = Flask(__name__)
 CORS(app)
+
+app.register_blueprint(user_bp, url_prefix='/user')
+app.register_blueprint(consultant_bp,url_prefix='/consultant')
+
+app.register_blueprint(training_bp, url_prefix='/training')
+
+app.register_blueprint(consultant_training_bp,url_prefix='/consultantTraining')
 
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -82,4 +88,5 @@ def agent_handler(agent_name):
         return jsonify({'error': 'File type not allowed, only PDF supported'}), 400
 
 if __name__ == "__main__":
+    init_db()
     app.run(debug=True)
