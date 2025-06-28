@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def openrouter_chat(prompt, model="cognitivecomputations/dolphin3.0-mistral-24b:free"):
+def openrouter_chat(prompt, model="deepseek/deepseek-chat:free"):
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
     if OPENROUTER_API_KEY:
         OPENROUTER_API_KEY = OPENROUTER_API_KEY.strip()
