@@ -1,0 +1,8 @@
+flask
+flask-cors
+werkzeug
+pdfplumber
+python-dotenv
+requests
+sqlalchemy
+psycopg2-binary

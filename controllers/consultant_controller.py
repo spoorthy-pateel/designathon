@@ -14,7 +14,6 @@ def get_consultant_service():
 @consultant_bp.route('/addConsultant', methods=['POST'])
 def add_consultant():
     try:
-        # Parse JSON data from the request
         data = request.json
         name = data.get('name')
         emp_id = data.get('emp_id')
@@ -22,31 +21,28 @@ def add_consultant():
         email = data.get('email')
         address = data.get('address')
         current_role = data.get('current_role')
-
-       
+        user_id = data.get('user_id')  # <-- Accept user_id from frontend
 
         # Validate required fields
-        if not name or not emp_id or not mobile_no or not email:
+        if not name or not emp_id or not mobile_no or not email or not user_id:
             return jsonify({"error": "Missing required fields"}), 400
 
-        # Get the consultant service
         consultant_service = get_consultant_service()
 
-        # Add the consultant
+        # Pass user_id to the service
         new_consultant, error = consultant_service.add_consultant(
             name=name,
             emp_id=emp_id,
             mobile_no=mobile_no,
             email=email,
             address=address,
-            current_role=current_role
+            current_role=current_role,
+            user_id=user_id  # <-- Pass user_id to service
         )
-        
 
         if error:
             return jsonify({"error": error}), 400
 
-        # Return success response
         return jsonify({
             "message": "Consultant added successfully",
             "consultant": {
@@ -144,5 +140,26 @@ def delete_consultant(consultant_id):
             return jsonify({"error": error}), 404
 
         return jsonify({"message": "Consultant deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@consultant_bp.route('/getConsultantByEmpId/<emp_id>', methods=['GET'])
+def get_consultant_by_emp_id(emp_id):
+    try:
+        consultant_service = get_consultant_service()
+        consultant = consultant_service.get_consultant_by_emp_id(emp_id)
+        if not consultant:
+            return jsonify({"error": f"No consultant found with emp_id {emp_id}"}), 404
+        return jsonify({
+            "consultant": {
+                "id": consultant.id,
+                "name": consultant.name,
+                "emp_id": consultant.emp_id,
+                "mobile_no": consultant.mobile_no,
+                "email": consultant.email,
+                "address": consultant.address,
+                "current_role": consultant.current_role
+            }
+        }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
