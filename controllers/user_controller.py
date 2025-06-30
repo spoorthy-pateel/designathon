@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from database import SessionLocal
 from models.user import Role
 from services.user_service import UserService
+import traceback
 
 # Create a Blueprint for user-related routes
 user_bp = Blueprint('user', __name__)
@@ -29,7 +30,13 @@ def add_user():
             return jsonify({"error": f"Invalid role. Allowed values: {', '.join([r.value for r in Role])}"}), 400
 
         user_service = get_user_service()
-        new_user = user_service.add_user(emp_id, password, role_enum)
+        try:
+            new_user = user_service.add_user(emp_id, password, role_enum)
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 409  # Conflict
+        except Exception as e:
+            traceback.print_exc()
+            return jsonify({"error": "An unexpected error occurred during user creation."}), 500
 
         return jsonify({
             "message": "User added successfully",
@@ -40,30 +47,25 @@ def add_user():
             }
         }), 201
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @user_bp.route('/login', methods=['POST'])
 def login():
     try:
-        # Parse JSON data from the request
         data = request.json
         emp_id = data.get('emp_id')
         password = data.get('password')
 
-        # Validate input
         if not emp_id or not password:
             return jsonify({"error": "Missing employee id or password"}), 400
 
-        # Get the user service
         user_service = get_user_service()
-
-        # Validate the user
         user, error = user_service.validate_user(emp_id, password)
 
         if error:
             return jsonify({"error": error}), 401
 
-        # Return success response
         return jsonify({
             "message": "Login successful",
             "user": {
@@ -74,4 +76,5 @@ def login():
         }), 200
 
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
