@@ -114,13 +114,51 @@ def get_training(training_id):
         return jsonify({"error": str(e)}), 500
 
 
+@training_bp.route('/getAllTrainings', methods=['GET'])
+def get_all_trainings():
+    try:
+        # Call the service method
+        training_service = get_training_service()
+        trainings = training_service.get_all_trainings()
+
+        # Format the response
+        # training_list = [
+        #     {
+        #         "id": training.id,
+        #         "training_name": training.training_name,
+        #         "technologies_learnt": training.technologies_learnt,
+        #         "level_of_training": training.level_of_training.value,
+        #         "duration": training.duration
+        #     }
+        #     for training in trainings
+        # ]
+
+        return jsonify({
+            "message": "Trainings retrieved successfully",
+            "trainings": [
+            {
+                "id": training.id,
+                "training_name": training.training_name,
+                "technologies_learnt": training.technologies_learnt,
+                "level_of_training": training.level_of_training.value,
+                "duration": training.duration
+            }
+            for training in trainings
+        ]
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+
 @training_bp.route('/deleteTraining/<int:training_id>', methods=['DELETE'])
 def delete_training(training_id):
     try:
         # Call the service method to delete the training
         training_service = get_training_service()
         deleted_training = training_service.delete_training_by_id(training_id)
-        print(deleted_training)
+        print(vars(deleted_training))
 
         if deleted_training:
             return jsonify({

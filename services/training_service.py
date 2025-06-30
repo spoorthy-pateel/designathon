@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from models.training import Training, TrainingLevel
 
+
 class TrainingService:
     def __init__(self, db_session: Session):
         self.db_session = db_session
@@ -61,4 +62,11 @@ class TrainingService:
         self.db_session.delete(training)
         self.db_session.commit()
         
-        return training
+        return training  
+
+    def get_all_trainings(self):
+    # Fetch all Training entries from the database
+        trainings = self.db_session.query(Training).all()
+
+        return trainings  # Return the list of all entries
+
