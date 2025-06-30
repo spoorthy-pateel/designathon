@@ -6,6 +6,7 @@ from resume_database import insert_resume_data
 from database import SessionLocal
 import re
 import os
+import traceback
 
 try:
     import docx  # python-docx
@@ -67,7 +68,7 @@ Output must be a pure JSON object matching this structure:
 
 Guidelines:
 - Estimate years_of_experience as accurately as possible from the resume.
-- For strength_of_skill, give an integer 1 (weakest) to 10 (strongest) for each skill, based on emphasis and context.
+- For strength_of_skill, give an integer 1 (weakest) to 5 (strongest) for each skill, based on emphasis and context.
 - Use ISO 8601 date format (YYYY-MM-DD) for all dates.
 - If any information is missing, set its value to null.
 
@@ -93,7 +94,10 @@ def handle_request(request, context):
     try:
         resume_text = extract_text_from_file(upload_path)
     except Exception as e:
-        return jsonify({"error": f"Failed to extract text: {str(e)}"}), 400
+        return jsonify({
+            "error": f"Failed to extract text: {str(e)}",
+            "traceback": traceback.format_exc()
+        }), 400
 
     print(resume_text)
 
@@ -108,7 +112,11 @@ def handle_request(request, context):
         try:
             data = json.loads(clean_llm_json(content))
         except Exception as e:
-            return jsonify({'error': 'LLM output was not valid JSON', 'llm_content': content}), 500
+            return jsonify({
+                'error': 'LLM output was not valid JSON',
+                'llm_content': content,
+                'traceback': traceback.format_exc()
+            }), 500
 
         db = SessionLocal()
         insert_resume_data(data, emp_id=emp_id, db_session=db)
@@ -116,4 +124,7 @@ def handle_request(request, context):
 
         return jsonify({'success': True, 'data': data})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500

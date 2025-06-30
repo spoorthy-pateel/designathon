@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from database import SessionLocal
 from models.consultant import Consultant
 from services.consultant_service import ConsultantService
+import traceback
 
 consultant_bp = Blueprint('consultant', __name__)
 
@@ -57,6 +58,7 @@ def add_consultant():
         }), 201
 
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
     
 @consultant_bp.route('/getConsultantById/<int:consultant_id>', methods=['GET'])
@@ -79,6 +81,7 @@ def get_consultant(consultant_id):
             }
         }), 200
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
     
 @consultant_bp.route('/getAllConsultants', methods=['GET'])
@@ -102,6 +105,7 @@ def get_all_consultants():
             ]
         }), 200
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
     
 @consultant_bp.route('/updateConsultant/<int:consultant_id>',methods=['PUT'])
@@ -129,6 +133,7 @@ def update_consultant(consultant_id):
             }
         }), 200
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
     
 @consultant_bp.route('/deleteConsultant/<int:consultant_id>',methods=['DELETE'])
@@ -141,6 +146,7 @@ def delete_consultant(consultant_id):
 
         return jsonify({"message": "Consultant deleted successfully"}), 200
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
     
 @consultant_bp.route('/getConsultantByEmpId/<emp_id>', methods=['GET'])
@@ -162,4 +168,5 @@ def get_consultant_by_emp_id(emp_id):
             }
         }), 200
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
