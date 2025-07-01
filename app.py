@@ -8,6 +8,7 @@ from controllers.consultant_training_controller import consultant_training_bp
 from controllers.consultant_controller import consultant_bp
 from controllers.skills_controller import skills_bp
 from controllers.opportunity_controller import opportunity_bp
+from controllers.consultant_opportunity_controller import consultant_opportunity_bp
 from database import init_db
 
 app = Flask(__name__)
@@ -19,6 +20,7 @@ app.register_blueprint(training_bp, url_prefix='/training')
 app.register_blueprint(consultant_training_bp, url_prefix='/consultantTraining')
 app.register_blueprint(skills_bp, url_prefix='/skills')
 app.register_blueprint(opportunity_bp, url_prefix='/opportunity')
+app.register_blueprint(consultant_opportunity_bp, url_prefix='/consultant-opportunity')
 
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
