@@ -3,17 +3,19 @@ from sqlalchemy.orm import Session
 from database import SessionLocal
 from models.consultant_opportunity import SelectionStatus 
 from services.consultant_opportunity_service import ConsultantOpportunityService
+import traceback
 
 # Create a Blueprint for consultant opportunity-related routes
-consultant_opportunity_bp = Blueprint('consultant_opportunity', __name__)
+consultant_opportunity_bp = Blueprint('consultantOpportunity', __name__)
 
 # Dependency injection for the service layer
 def get_consultant_opportunity_service():
     db_session: Session = SessionLocal()
-    return ConsultantOpportunityService(db_session)
+    return ConsultantOpportunityService(db_session), db_session
 
 @consultant_opportunity_bp.route('/addConsultantOpportunity', methods=['POST'])
 def add_consultant_opportunity():
+    db_session = None
     try:
         data = request.json
         consultant_id = data.get('consultant_id')
@@ -21,17 +23,14 @@ def add_consultant_opportunity():
         selection_status = data.get('selection_status')
         remarks = data.get('remarks')
 
-        # Validate required fields
         if not consultant_id or not opportunity_id or not selection_status:
             return jsonify({"error": "Missing required fields"}), 400
 
-        # Validate selection_status
         valid_statuses = ["Selected", "Rejected", "Pending"]
         if selection_status not in valid_statuses:
             return jsonify({"error": f"Invalid selection status. Must be one of {valid_statuses}"}), 400
 
-        # Call the service method to add the consultant opportunity
-        consultant_opportunity_service = get_consultant_opportunity_service()
+        consultant_opportunity_service, db_session = get_consultant_opportunity_service()
         new_consultant_opportunity = consultant_opportunity_service.add_consultant_opportunity(
             consultant_id, opportunity_id, selection_status, remarks
         )
@@ -47,14 +46,16 @@ def add_consultant_opportunity():
             }
         }), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+    finally:
+        if db_session:
+            db_session.close()
 
 @consultant_opportunity_bp.route('/getConsultantOpportunityById/<int:id>', methods=['GET'])
 def get_consultant_opportunity_by_id(id):
+    db_session = None
     try:
-        # Call the service method to fetch the consultant opportunity by ID
-        consultant_opportunity_service = get_consultant_opportunity_service()
+        consultant_opportunity_service, db_session = get_consultant_opportunity_service()
         consultant_opportunity = consultant_opportunity_service.get_consultant_opportunity_by_id(id)
 
         if not consultant_opportunity:
@@ -71,17 +72,17 @@ def get_consultant_opportunity_by_id(id):
             }
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+    finally:
+        if db_session:
+            db_session.close()
 
 @consultant_opportunity_bp.route('/updateConsultantOpportunity/<int:id>', methods=['PUT'])
 def update_consultant_opportunity(id):
+    db_session = None
     try:
-        # Extract data from the request
         data = request.get_json()
-
-        # Call the service method to update the consultant opportunity
-        consultant_opportunity_service = get_consultant_opportunity_service()
+        consultant_opportunity_service, db_session = get_consultant_opportunity_service()
         updated_consultant_opportunity = consultant_opportunity_service.update_consultant_opportunity(
             id=id,
             consultant_id=data.get('consultant_id'),
@@ -104,14 +105,16 @@ def update_consultant_opportunity(id):
             }
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+    finally:
+        if db_session:
+            db_session.close()
 
 @consultant_opportunity_bp.route('/deleteConsultantOpportunity/<int:id>', methods=['DELETE'])
 def delete_consultant_opportunity(id):
+    db_session = None
     try:
-        # Call the service method to delete the consultant opportunity by ID
-        consultant_opportunity_service = get_consultant_opportunity_service()
+        consultant_opportunity_service, db_session = get_consultant_opportunity_service()
         is_deleted = consultant_opportunity_service.delete_consultant_opportunity_by_id(id)
 
         if not is_deleted:
@@ -119,21 +122,21 @@ def delete_consultant_opportunity(id):
 
         return jsonify({"message": "Consultant opportunity deleted successfully"}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+    finally:
+        if db_session:
+            db_session.close()
 
 @consultant_opportunity_bp.route('/getAllConsultantOpportunities', methods=['GET'])
 def get_all_consultant_opportunities():
+    db_session = None
     try:
-        # Call the service method to fetch all consultant opportunities
-        consultant_opportunity_service = get_consultant_opportunity_service()
+        consultant_opportunity_service, db_session = get_consultant_opportunity_service()
         consultant_opportunities = consultant_opportunity_service.get_all_consultant_opportunities()
 
         if not consultant_opportunities:
             return jsonify({"message": "No consultant opportunities found"}), 404
 
-        # Format the response
         consultant_opportunity_list = [
             {
                 "id": co.id,
@@ -150,4 +153,7 @@ def get_all_consultant_opportunities():
             "consultant_opportunities": consultant_opportunity_list
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+    finally:
+        if db_session:
+            db_session.close()

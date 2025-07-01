@@ -12,7 +12,7 @@ from controllers.consultant_opportunity_controller import consultant_opportunity
 from database import init_db
 
 app = Flask(__name__)
-CORS(app)
+CORS(app,supports_credentials=True)
 
 app.register_blueprint(user_bp, url_prefix='/user')
 app.register_blueprint(consultant_bp, url_prefix='/consultant')
@@ -21,6 +21,8 @@ app.register_blueprint(consultant_training_bp, url_prefix='/consultantTraining')
 app.register_blueprint(skills_bp, url_prefix='/skills')
 app.register_blueprint(opportunity_bp, url_prefix='/opportunity')
 app.register_blueprint(consultant_opportunity_bp, url_prefix='/consultantOpportunity')
+
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 UPLOAD_FOLDER = 'uploads'

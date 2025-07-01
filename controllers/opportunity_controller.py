@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from sqlalchemy.orm import Session
+import traceback  # <-- Add this import
 
 from database import SessionLocal
 from services.opportunity_service import OpportunityService
@@ -14,14 +15,10 @@ def get_opportunity_service():
 @opportunity_bp.route('/createOpportunity', methods=['POST'])
 def create_opportunity():
     try:
-        # Extract data from the request
         data = request.get_json()
-
-        # Validate input
         if not all(key in data for key in ['name', 'skills_expected', 'years_of_experience_required', 'deadline']):
             return jsonify({"error": "Missing required fields"}), 400
 
-        # Call the service method to create the opportunity
         opportunity_service = get_opportunity_service()
         new_opportunity = opportunity_service.create_opportunity(
             name=data['name'],
@@ -41,13 +38,14 @@ def create_opportunity():
             }
         }), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
 
-    
 @opportunity_bp.route('/getOpportunityById/<int:id>', methods=['GET'])
 def get_opportunity_by_id(id):
     try:
-        # Call the service method to fetch the opportunity by ID
         opportunity_service = get_opportunity_service()
         opportunity = opportunity_service.get_opportunity_by_id(id)
 
@@ -65,16 +63,15 @@ def get_opportunity_by_id(id):
             }
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+        return jsonify({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
 
 @opportunity_bp.route('/updateOpportunity/<int:id>', methods=['PUT'])
 def update_opportunity(id):
     try:
-        # Extract data from the request
         data = request.get_json()
-
-        # Call the service method to update the opportunity
         opportunity_service = get_opportunity_service()
         updated_opportunity = opportunity_service.update_opportunity(
             id=id,
@@ -98,12 +95,14 @@ def update_opportunity(id):
             }
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
 
 @opportunity_bp.route('/deleteOpportunity/<int:id>', methods=['DELETE'])
 def delete_opportunity(id):
     try:
-        # Call the service method to delete the opportunity by ID
         opportunity_service = get_opportunity_service()
         is_deleted = opportunity_service.delete_opportunity_by_id(id)
 
@@ -112,20 +111,20 @@ def delete_opportunity(id):
 
         return jsonify({"message": "Opportunity deleted successfully"}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+        return jsonify({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
 
 @opportunity_bp.route('/getAllOpportunities', methods=['GET'])
 def get_all_opportunities():
     try:
-        # Call the service method to fetch all opportunities
         opportunity_service = get_opportunity_service()
         opportunities = opportunity_service.get_all_opportunities()
 
         if not opportunities:
             return jsonify({"message": "No opportunities found"}), 404
 
-        # Format the response
         opportunity_list = [
             {
                 "id": opportunity.id,
@@ -142,53 +141,40 @@ def get_all_opportunities():
             "opportunities": opportunity_list
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
 
+@opportunity_bp.route('/getOpportunities', methods=['POST', 'OPTIONS'])
+def get_opportunities():
+    if request.method == 'OPTIONS':
+        return '', 200  # Handles CORS preflight
 
+    try:
+        data = request.get_json() or {}
+        ids = data.get('ids', [])
+        if not isinstance(ids, list) or not all(isinstance(i, int) for i in ids):
+            return jsonify({"error": "Invalid or missing 'ids'. It should be a list of integers."}), 400
 
+        opportunity_service = get_opportunity_service()
+        opportunities = opportunity_service.get_opportunities_by_ids(ids)
 
-
-# def get_service():
-#     db_session = SessionLocal()
-#     return OpportunityService(db_session), db_session
-
-# @opportunity_bp.route('/getOpportunities', methods=['POST'])
-# def get_opportunities():
-#     ids = request.json.get('ids', [])
-#     service, db = get_service()
-#     try:
-#         opportunities = service.get_opportunities_by_ids(ids)
-#         return jsonify({
-#             "opportunities": [
-#                 {
-#                     "id": o.id,
-#                     "name": o.name,
-#                     "skills_expected": o.skills_expected,
-#                     "years_of_experience_required": o.years_of_experience_required,
-#                     "deadline": o.deadline.isoformat() if o.deadline else None,
-#                 }
-#                 for o in opportunities
-#             ]
-#         })
-#     finally:
-#         db.close()
-
-# @opportunity_bp.route('/getAllOpportunities', methods=['GET'])
-# def get_all_opportunities():
-#     service, db = get_service()
-#     try:
-#         opportunities = service.get_all_opportunities()
-#         return jsonify({
-#             "opportunities": [
-#                 {
-#                     "id": o.id,
-#                     "name": o.name,
-#                     "skills_expected": o.skills_expected,
-#                     "years_of_experience_required": o.years_of_experience_required,
-#                     "deadline": o.deadline.isoformat() if o.deadline else None,
-#                 }
-#                 for o in opportunities
-#             ]
-#         })
-#     finally:
-#         db.close()
+        opportunity_list = [
+            {
+                "id": o.id,
+                "name": o.name,
+                "skills_expected": o.skills_expected,
+                "years_of_experience_required": o.years_of_experience_required,
+                "deadline": o.deadline.isoformat() if o.deadline else None,
+            }
+            for o in opportunities
+        ]
+        return jsonify({
+            "opportunities": opportunity_list
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500

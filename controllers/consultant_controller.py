@@ -10,10 +10,11 @@ consultant_bp = Blueprint('consultant', __name__)
 # Dependency injection for the service layer
 def get_consultant_service():
     db_session: Session = SessionLocal()
-    return ConsultantService(db_session)
+    return ConsultantService(db_session), db_session
 
 @consultant_bp.route('/addConsultant', methods=['POST'])
 def add_consultant():
+    db_session = None
     try:
         data = request.json
         name = data.get('name')
@@ -24,13 +25,10 @@ def add_consultant():
         current_role = data.get('current_role')
         user_id = data.get('user_id')  # <-- Accept user_id from frontend
 
-        # Validate required fields
         if not name or not emp_id or not mobile_no or not email or not user_id:
             return jsonify({"error": "Missing required fields"}), 400
 
-        consultant_service = get_consultant_service()
-
-        # Pass user_id to the service
+        consultant_service, db_session = get_consultant_service()
         new_consultant, error = consultant_service.add_consultant(
             name=name,
             emp_id=emp_id,
@@ -38,7 +36,7 @@ def add_consultant():
             email=email,
             address=address,
             current_role=current_role,
-            user_id=user_id  # <-- Pass user_id to service
+            user_id=user_id
         )
 
         if error:
@@ -60,11 +58,15 @@ def add_consultant():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-    
+    finally:
+        if db_session:
+            db_session.close()
+
 @consultant_bp.route('/getConsultantById/<int:consultant_id>', methods=['GET'])
 def get_consultant(consultant_id):
+    db_session = None
     try:
-        consultant_service = get_consultant_service()
+        consultant_service, db_session = get_consultant_service()
         consultant, error = consultant_service.get_consultant(consultant_id)
         if error:
             return jsonify({"error": error}), 404
@@ -83,11 +85,15 @@ def get_consultant(consultant_id):
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-    
+    finally:
+        if db_session:
+            db_session.close()
+
 @consultant_bp.route('/getAllConsultants', methods=['GET'])
 def get_all_consultants():
+    db_session = None
     try:
-        consultant_service = get_consultant_service()
+        consultant_service, db_session = get_consultant_service()
         consultants = consultant_service.get_all_consultants()
 
         return jsonify({
@@ -107,15 +113,18 @@ def get_all_consultants():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-    
+    finally:
+        if db_session:
+            db_session.close()
+
 @consultant_bp.route('/updateConsultant/<int:consultant_id>',methods=['PUT'])
 def update_consultant(consultant_id):
+    db_session = None
     try:
         data = request.json
-
         data.pop('user_id', None)
 
-        consultant_service = get_consultant_service()
+        consultant_service, db_session = get_consultant_service()
         consultant, error = consultant_service.update_consultant(consultant_id, **data)
         if error:
             return jsonify({"error": error}), 404
@@ -135,11 +144,15 @@ def update_consultant(consultant_id):
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-    
+    finally:
+        if db_session:
+            db_session.close()
+
 @consultant_bp.route('/deleteConsultant/<int:consultant_id>',methods=['DELETE'])
 def delete_consultant(consultant_id):
+    db_session = None
     try:
-        consultant_service = get_consultant_service()
+        consultant_service, db_session = get_consultant_service()
         success, error = consultant_service.delete_consultant(consultant_id)
         if error:
             return jsonify({"error": error}), 404
@@ -148,11 +161,15 @@ def delete_consultant(consultant_id):
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-    
+    finally:
+        if db_session:
+            db_session.close()
+
 @consultant_bp.route('/getConsultantByEmpId/<emp_id>', methods=['GET'])
 def get_consultant_by_emp_id(emp_id):
+    db_session = None
     try:
-        consultant_service = get_consultant_service()
+        consultant_service, db_session = get_consultant_service()
         consultant = consultant_service.get_consultant_by_emp_id(emp_id)
         if not consultant:
             return jsonify({"error": f"No consultant found with emp_id {emp_id}"}), 404
@@ -170,3 +187,6 @@ def get_consultant_by_emp_id(emp_id):
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+    finally:
+        if db_session:
+            db_session.close()

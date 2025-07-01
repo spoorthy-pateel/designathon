@@ -175,3 +175,27 @@ def delete_training(training_id):
             return jsonify({"error": "Training not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@training_bp.route('/getTrainingsByIds', methods=['POST'])
+def get_trainings_by_ids():
+    try:
+        data = request.json
+        ids = data.get('ids', [])
+        if not isinstance(ids, list) or not ids:
+            return jsonify({"error": "List of training IDs required"}), 400
+
+        training_service = get_training_service()
+        trainings = training_service.get_trainings_by_ids(ids)
+
+        return jsonify([
+            {
+                "id": training.id,
+                "training_name": training.training_name,
+                "technologies_learnt": training.technologies_learnt,
+                "level_of_training": training.level_of_training.value,
+                "duration": training.duration
+            }
+            for training in trainings
+        ]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

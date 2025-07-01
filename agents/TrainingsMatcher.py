@@ -1,0 +1,137 @@
+import json
+from flask import jsonify
+from OpenRouter import openrouter_chat
+from database import SessionLocal
+from models.consultant import Consultant
+from models.consultant_opportunity import ConsultantOpportunity
+from models.opportunity import Opportunity
+from models.training import Training
+import traceback
+
+def build_prompt(skills, applied_skills, trainings):
+    """
+    Builds a prompt for the LLM that asks it to match the consultant's skills
+    and the skills needed for jobs they've applied to, against available trainings.
+    """
+    return f"""
+IMPORTANT: Respond ONLY with a valid JSON array of integers (training IDs). 
+NO markdown, NO code fences, NO explanations, NO extra text.
+
+The consultant's extracted skills and experience:
+{json.dumps(skills, indent=2)}
+
+The skills required in jobs they've applied to:
+{json.dumps(applied_skills, indent=2)}
+
+The list of available trainings (each item: id, name, skills_covered, duration):
+{json.dumps(trainings, indent=2)}
+
+Instructions:
+- Output a JSON array containing the ids of the best-matching trainings for the consultant, sorted from best to least match.
+- The array must look like: [3, 4, 5]
+- Recommend trainings that best close the skill gap between the consultant's current skills and those required in their applied jobs.
+- Do not include any other text or structure.
+"""
+
+def handle_request(request, context):
+    emp_id = request.headers.get("X-Emp-ID")
+    if not emp_id:
+        print("Error: Missing emp_id in request header")
+        return jsonify({"error": "Missing emp_id in request header"}), 400
+
+    db = SessionLocal()
+    try:
+        # Fetch consultant
+        consultant = db.query(Consultant).filter_by(emp_id=emp_id).first()
+        if not consultant:
+            print(f"Error: No consultant found with emp_id {emp_id}")
+            return jsonify({"error": f"No consultant found with emp_id {emp_id}"}), 404
+
+        # Consultant's current skills
+        skills = [
+            {
+                "technologies_known": skill.technologies_known,
+                "years_of_experience": skill.years_of_experience,
+                "strength_of_skill": getattr(skill, "strength_of_skill", None)
+            }
+            for skill in getattr(consultant, "skills", [])
+        ]
+        years_of_experience = max([s["years_of_experience"] for s in skills if s["years_of_experience"] is not None] or [0])
+
+        # Jobs they've applied to (consultant_opportunity)
+        applied_opp_ids = [
+            co.opportunity_id for co in db.query(ConsultantOpportunity).filter_by(consultant_id=consultant.id).all()
+        ]
+        applied_opps = db.query(Opportunity).filter(Opportunity.id.in_(applied_opp_ids)).all()
+        applied_skills = [
+            {
+                "id": o.id,
+                "name": o.name,
+                "skills_expected": o.skills_expected,
+                "years_of_experience_required": o.years_of_experience_required,
+                "deadline": o.deadline.isoformat() if o.deadline else None
+            }
+            for o in applied_opps
+        ]
+
+        # All trainings
+        trainings = db.query(Training).all()
+        trainings_list = [
+            {
+                "id": t.id,
+                "name": t.training_name,
+                "skills_covered": t.technologies_learnt,
+                "level": t.level_of_training.value if hasattr(t.level_of_training, "value") else str(t.level_of_training),
+                "duration": t.duration,
+                "description": getattr(t, "description", None)
+            }
+            for t in trainings
+        ]
+
+        if not skills or not applied_skills or not trainings_list:
+            print("Info: skills, applied_skills, or trainings_list is empty. Returning empty matches.")
+            return jsonify({"matches": []})  # Nothing to match
+
+        # Build prompt for LLM
+        prompt = build_prompt(
+            {
+                "skills": skills,
+                "years_of_experience": years_of_experience
+            },
+            applied_skills,
+            trainings_list
+        )
+
+        print("Prompt sent to LLM:\n", prompt)
+
+        # Call LLM
+        llm_response = openrouter_chat(prompt)
+        print("LLM raw response:", llm_response)
+        content = (
+            llm_response.get('choices', [{}])[0].get('message', {}).get('content', '')
+            or llm_response.get('content', '')
+        )
+        print("LLM content:", content)
+        try:
+            matches = json.loads(content)
+        except Exception as e:
+            print("Error: LLM output was not valid JSON")
+            print("Content received:", content)
+            print(traceback.format_exc())
+            return jsonify({
+                'error': 'LLM output was not valid JSON',
+                'llm_content': content,
+                'traceback': traceback.format_exc()
+            }), 500
+
+        return jsonify({'matches': matches})
+
+    except Exception as e:
+        print("Exception caught in handle_request:")
+        print(traceback.format_exc())
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+    finally:
+        db.close()

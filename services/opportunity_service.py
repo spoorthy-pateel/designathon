@@ -73,6 +73,9 @@ class OpportunityService:
 
         return opportunities  # Return the list of all opportunities or an empty list if none are found
 
+    def get_opportunities_by_ids(self, ids):
+       return self.db_session.query(Opportunity).filter(Opportunity.id.in_(ids)).all()
+
 
 
 
