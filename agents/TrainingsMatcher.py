@@ -1,4 +1,5 @@
 import json
+import re
 from flask import jsonify
 from OpenRouter import openrouter_chat
 from database import SessionLocal
@@ -9,14 +10,8 @@ from models.training import Training
 import traceback
 
 def build_prompt(skills, applied_skills, trainings):
-    """
-    Builds a prompt for the LLM that asks it to match the consultant's skills
-    and the skills needed for jobs they've applied to, against available trainings.
-    Handles missing/empty data for skills or applied_skills gracefully.
-    """
-    # Format for optional sections
     skills_section = (
-        json.dumps(skills, indent=2) if skills and skills.get("skills") else "No skills data available."
+        json.dumps(skills, indent=2) if skills and isinstance(skills.get("skills"), list) else "No skills data available."
     )
     applied_skills_section = (
         json.dumps(applied_skills, indent=2) if applied_skills else "No applied jobs data available."
@@ -43,6 +38,19 @@ Instructions:
 - Do not include any other text or structure.
 """
 
+def extract_json_array(text):
+    try:
+        # Remove code fences if present
+        text = re.sub(r"```.*?```", "", text, flags=re.DOTALL).strip()
+
+        # Extract first JSON array in text
+        match = re.search(r"\[.*?\]", text, re.DOTALL)
+        if match:
+            return json.loads(match.group(0))
+    except Exception as e:
+        print("Error parsing cleaned JSON:", e)
+    return None
+
 def handle_request(request, context):
     emp_id = request.headers.get("X-Emp-ID")
     if not emp_id:
@@ -51,13 +59,11 @@ def handle_request(request, context):
 
     db = SessionLocal()
     try:
-        # Fetch consultant
         consultant = db.query(Consultant).filter_by(emp_id=emp_id).first()
         if not consultant:
             print(f"Error: No consultant found with emp_id {emp_id}")
             return jsonify({"error": f"No consultant found with emp_id {emp_id}"}), 404
 
-        # Consultant's current skills
         skills = [
             {
                 "technologies_known": skill.technologies_known,
@@ -68,7 +74,6 @@ def handle_request(request, context):
         ]
         years_of_experience = max([s["years_of_experience"] for s in skills if s["years_of_experience"] is not None] or [0])
 
-        # Jobs they've applied to (consultant_opportunity)
         applied_opp_ids = [
             co.opportunity_id for co in db.query(ConsultantOpportunity).filter_by(consultant_id=consultant.id).all()
         ]
@@ -84,7 +89,6 @@ def handle_request(request, context):
             for o in applied_opps
         ]
 
-        # All trainings
         trainings = db.query(Training).all()
         trainings_list = [
             {
@@ -98,12 +102,10 @@ def handle_request(request, context):
             for t in trainings
         ]
 
-        # Only trainings_list must be non-empty
         if not trainings_list:
             print("Info: trainings_list is empty. Returning empty matches.")
-            return jsonify({"matches": []})  # Can't match if no trainings at all
+            return jsonify({"matches": []})
 
-        # Build prompt for LLM (handles empty skills/applied_skills gracefully)
         prompt = build_prompt(
             {
                 "skills": skills,
@@ -115,7 +117,6 @@ def handle_request(request, context):
 
         print("Prompt sent to LLM:\n", prompt)
 
-        # Call LLM
         llm_response = openrouter_chat(prompt)
         print("LLM raw response:", llm_response)
         content = (
@@ -123,16 +124,13 @@ def handle_request(request, context):
             or llm_response.get('content', '')
         )
         print("LLM content:", content)
-        try:
-            matches = json.loads(content)
-        except Exception as e:
-            print("Error: LLM output was not valid JSON")
-            print("Content received:", content)
-            print(traceback.format_exc())
+
+        matches = extract_json_array(content)
+        if matches is None:
+            print("Error: LLM output did not contain a valid JSON array")
             return jsonify({
-                'error': 'LLM output was not valid JSON',
-                'llm_content': content,
-                'traceback': traceback.format_exc()
+                'error': 'LLM output did not contain a valid JSON array',
+                'llm_content': content
             }), 500
 
         return jsonify({'matches': matches})

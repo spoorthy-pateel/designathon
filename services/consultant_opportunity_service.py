@@ -73,15 +73,10 @@ class ConsultantOpportunityService:
 
         return consultant_opportunities  # Return the list of all consultant opportunities or an empty list if none are found
 
-
-
-
-
-            
-
-
-
-
-
-
-
+    def get_consultant_opportunity_by_consultant_id(self, consultant_id: int):
+        consultant_opportunities = (
+            self.db_session.query(ConsultantOpportunity)
+            .filter_by(consultant_id=consultant_id)
+            .all()
+        )
+        return consultant_opportunities

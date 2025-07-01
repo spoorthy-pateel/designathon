@@ -157,3 +157,34 @@ def get_all_consultant_opportunities():
     finally:
         if db_session:
             db_session.close()
+            
+@consultant_opportunity_bp.route('/getOpportunitiesByConsultant/<int:consultant_id>', methods=['GET'])
+def get_opportunities_by_consultant(consultant_id):
+    db_session = None
+    try:
+        consultant_opportunity_service, db_session = get_consultant_opportunity_service()
+        consultant_opportunities = consultant_opportunity_service.get_consultant_opportunity_by_consultant_id(consultant_id)
+
+        if not consultant_opportunities:
+            return jsonify({"message": "No consultant opportunities found"}), 404
+
+        consultant_opportunity_list = [
+            {
+                "id": co.id,
+                "consultant_id": co.consultant_id,
+                "opportunity_id": co.opportunity_id,
+                "selection_status": co.selection_status.value,
+                "remarks": co.remarks
+            }
+            for co in consultant_opportunities
+        ]
+
+        return jsonify({
+            "message": "Consultant opportunities retrieved successfully",
+            "opportunities": consultant_opportunity_list
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+    finally:
+        if db_session:
+            db_session.close()

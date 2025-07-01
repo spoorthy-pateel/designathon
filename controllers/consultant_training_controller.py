@@ -147,8 +147,7 @@ def get_consultant_trainings_by_consultant_id(consultant_id):
     try:
         consultant_training_service = get_consultant_training_service(db_session)
         consultant_trainings = consultant_training_service.get_consultant_trainings_by_consultant_id(consultant_id)
-        if not consultant_trainings:
-            return jsonify({"message": "No trainings found for the given consultant ID"}), 404
+
         consultant_training_list = [
             {
                 "id": ct.id,
@@ -158,6 +157,7 @@ def get_consultant_trainings_by_consultant_id(consultant_id):
             }
             for ct in consultant_trainings
         ]
+
         return jsonify({
             "message": "Consultant trainings retrieved successfully",
             "consultant_trainings": consultant_training_list
@@ -167,4 +167,4 @@ def get_consultant_trainings_by_consultant_id(consultant_id):
         print(traceback_str)
         return jsonify({"error": str(e), "traceback": traceback_str}), 500
     finally:
-        db_session.close()  
+        db_session.close()
