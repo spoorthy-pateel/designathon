@@ -57,20 +57,21 @@ class ConsultantService:
             traceback.print_exc()
             return []
     
-    def update_consultant(self,consultant_id:int,**kwargs):
+    def update_consultant(self, consultant_id:int, **kwargs):
         try:
             consultant = self.db_session.query(Consultant).filter(Consultant.id==consultant_id).first()
             if not consultant:
                 return None, f"No consultant found with the id {consultant_id}"
             
-            kwargs.pop('user_id', None)
-
+            print("Before:", consultant.current_role)
             for key, value in kwargs.items():
                 if hasattr(consultant, key):
+                    print(f"Updating {key} from {getattr(consultant, key)} to {value}")
                     setattr(consultant, key, value)
-
-            # Commit the changes to the database
             self.db_session.commit()
+            # Force refresh from DB
+            self.db_session.refresh(consultant)
+            print("After:", consultant.current_role)
             return consultant, None
         except Exception as e:
             traceback.print_exc()

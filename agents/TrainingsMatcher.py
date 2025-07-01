@@ -12,16 +12,25 @@ def build_prompt(skills, applied_skills, trainings):
     """
     Builds a prompt for the LLM that asks it to match the consultant's skills
     and the skills needed for jobs they've applied to, against available trainings.
+    Handles missing/empty data for skills or applied_skills gracefully.
     """
+    # Format for optional sections
+    skills_section = (
+        json.dumps(skills, indent=2) if skills and skills.get("skills") else "No skills data available."
+    )
+    applied_skills_section = (
+        json.dumps(applied_skills, indent=2) if applied_skills else "No applied jobs data available."
+    )
+
     return f"""
 IMPORTANT: Respond ONLY with a valid JSON array of integers (training IDs). 
 NO markdown, NO code fences, NO explanations, NO extra text.
 
 The consultant's extracted skills and experience:
-{json.dumps(skills, indent=2)}
+{skills_section}
 
 The skills required in jobs they've applied to:
-{json.dumps(applied_skills, indent=2)}
+{applied_skills_section}
 
 The list of available trainings (each item: id, name, skills_covered, duration):
 {json.dumps(trainings, indent=2)}
@@ -30,6 +39,7 @@ Instructions:
 - Output a JSON array containing the ids of the best-matching trainings for the consultant, sorted from best to least match.
 - The array must look like: [3, 4, 5]
 - Recommend trainings that best close the skill gap between the consultant's current skills and those required in their applied jobs.
+- If there is no skill or applied job information, recommend the most relevant or foundational trainings.
 - Do not include any other text or structure.
 """
 
@@ -88,11 +98,12 @@ def handle_request(request, context):
             for t in trainings
         ]
 
-        if not skills or not applied_skills or not trainings_list:
-            print("Info: skills, applied_skills, or trainings_list is empty. Returning empty matches.")
-            return jsonify({"matches": []})  # Nothing to match
+        # Only trainings_list must be non-empty
+        if not trainings_list:
+            print("Info: trainings_list is empty. Returning empty matches.")
+            return jsonify({"matches": []})  # Can't match if no trainings at all
 
-        # Build prompt for LLM
+        # Build prompt for LLM (handles empty skills/applied_skills gracefully)
         prompt = build_prompt(
             {
                 "skills": skills,
