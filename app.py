@@ -20,7 +20,8 @@ app.register_blueprint(training_bp, url_prefix='/training')
 app.register_blueprint(consultant_training_bp, url_prefix='/consultantTraining')
 app.register_blueprint(skills_bp, url_prefix='/skills')
 app.register_blueprint(opportunity_bp, url_prefix='/opportunity')
-app.register_blueprint(consultant_opportunity_bp, url_prefix='/consultant-opportunity')
+app.register_blueprint(consultant_opportunity_bp, url_prefix='/consultantOpportunity')
+
 
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
